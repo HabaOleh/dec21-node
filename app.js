@@ -47,5 +47,3 @@ const swipe = async (read, gender, write) => {
 }
 swipe("boys", "female", "girls");
 swipe("girls", "male", "boys");
-
-
