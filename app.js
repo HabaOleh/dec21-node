@@ -1,49 +1,23 @@
-// const fs = require("fs");
-// const path = require("path");
-//
-// const swipe = (read, gender, write)=> {
-//     fs.readdir(path.join(__dirname, read), (err, files) => {
-//         if (err) return console.log(err);
-//
-//         for (const file of files) {
-//             const readPath = path.join(__dirname, read, file);
-//
-//             fs.readFile(readPath, (err, data) => {
-//                 if (err) return console.log(err);
-//
-//                 const user = JSON.parse(data.toString());
-//
-//                 if (user.gender === gender) {
-//                     fs.rename(readPath, path.join(__dirname, write, file), err => {
-//                         if (err) return console.log(err);
-//                     });
-//                 }
-//             });
-//         }
-//     });
-// }
-//
-// swipe("boys", "female", "girls");
-// swipe("girls", "male", "boys");
-
-
 const fs = require("fs/promises");
 const path = require("path");
 
-const swipe = async (read, gender, write) => {
+const reader = async (read) => {
     try {
-        const files = await fs.readdir(path.join(__dirname, read));
+        const files = await fs.readdir(read);
+
         for (const file of files) {
-            const readPath = path.join(__dirname, read, file);
-            const data = await fs.readFile(readPath);
-            const user = JSON.parse(data.toString());
-            if (user.gender === gender) {
-                await fs.rename(readPath, path.join(__dirname, write, file));
+            const stat = await fs.stat(path.join(read,file));
+
+            if (stat.isFile()) {
+                await fs.rename(path.join(read, file),path.join(__dirname,"exitFolder",file));
+            }
+            if(stat.isDirectory()){
+                await reader(path.join(read,file));
             }
         }
     }catch (e){
         console.log(e);
     }
 }
-swipe("boys", "female", "girls");
-swipe("girls", "male", "boys");
+reader(path.join(__dirname,"MainFolder"));
+
