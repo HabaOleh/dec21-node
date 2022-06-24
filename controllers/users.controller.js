@@ -1,92 +1,63 @@
-const {fileService} = require("../services");
+const {userService,passwordService} = require('../services');
+const { userPresenter } = require('../presenters/user.presenter');
 
 module.exports = {
-    findUser: async (req, res) => {
-        const users = await fileService.reader();
-        res.json(users);
+    findUsers: async (req, res, next) => {
+        try {
+            const users = await userService.findUsers(req.query).exec();
+
+            const usersForResponse = users.map(u => userPresenter(u));
+
+            res.json(usersForResponse);
+        } catch (e) {
+            next(e);
+        }
     },
 
-    createUser: async (req, res) => {
-        const {name, age} = req.body;
+    createUser: async (req, res, next) => {
+        try {
+            const hash = await passwordService.hashPassword(req.body.password);
 
-        if (!Number.isInteger(age) || age < 18) {
-            return res.status(400).json('Set valid age');
+            const newUser = await userService.createUser({ ...req.body, password: hash });
+
+            const userForResponse = userPresenter(newUser);
+
+            res.status(201).json(userForResponse);
+        } catch (e) {
+            next(e);
         }
-
-        if (!name || name.length < 3) {
-            return res.status(400).json('Set valid name');
-        }
-
-        const users = await fileService.reader();
-
-        const newUser = {...req.body, id: users.length ? users[users.length - 1].id + 1 : 1}
-
-        await fileService.writer([...users, newUser]);
-
-        res.status(201).json(newUser);
     },
 
-    findUserById: async (req, res) => {
-        const userId = +req.params.userId;
+    getUserById: async (req, res, next) => {
+        try {
+            const userForResponse = userPresenter(user);
 
-        if (isNaN(userId) || userId < 0) {
-            return res.status(400).json('Please enter valid ID');
+            res.json(userForResponse);
+        } catch (e) {
+            next(e);
         }
-        const users = await fileService.reader();
-        const user = users[userId - 1];
-
-        if (!user) {
-            return res.status(404).json(`Use with ID ${userId} is not found`);
-        }
-        res.json(user);
     },
 
-    updateUserById: async (req, res) => {
-        const {userId} = req.params;
-        const {name, age} = req.body;
+    updateUserById: async (req, res, next) => {
+        try {
+            const updatedUser = await userService.updateOneUser({ _id: id }, req.body);
 
-        if (age && !Number.isInteger(age) || age < 18) {
-            return res.status(400).json('Set valid age');
+            const userForResponse = userPresenter(updatedUser);
+
+            res.status(201).json(userForResponse);
+        } catch (e) {
+            next(e);
         }
-
-        if (name && name.length < 3) {
-            return res.status(400).json('Set valid name');
-        }
-
-        const users = await fileService.reader();
-
-        const index = users.findIndex((user) => user.id === +userId);
-
-
-        if (index === -1) {
-            return res.status(400).json(`User with id ${userId} not found`);
-        }
-
-        //const updatedUser = {...users[index],...req.body};
-        const updatedUser = Object.assign(users[index], req.body);
-
-        users.splice(index, 1);
-
-        await fileService.writer([...users, updatedUser]);
-
-        res.status(201).json(updatedUser);
-
     },
 
-    deleteUserById: async (req, res) => {
-        const {userId} = req.params;
-        const users = await fileService.reader();
+    deleteUserById: async (req, res, next) => {
+        try {
+            const {id} = req.params;
+            await userService.deleteOneUser({_id: id})
 
-        const index = users.findIndex((user) => user.id === +userId);
-
-        if (index === -1) {
-            return res.status(400).json(`User with id ${userId} not found`);
+            res.sendStatus(204);
+        } catch (e) {
+            next(e);
         }
-
-        users.splice(index, 1);
-
-        await fileService.writer(users);
-
-        res.sendStatus(204);
-    }
-}
+    },
+};
